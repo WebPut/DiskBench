@@ -55,16 +55,46 @@ export class StorageManager {
         return 0;
     }
 
-    /**
-     * Delete all benchmark data.
+       /**
+     * Delete all benchmark data from any possible backend.
+     * Works even if init() was never called.
      */
     async deleteAll() {
-        if (this.backend === 'indexeddb') {
-            await this._deleteIndexedDBData();
-        } else if (this.backend === 'filesystem') {
-            await this._deleteFileSystemData();
+        const results = [];
+        // 1. IndexedDB cleanup (always possible)
+        try {
+            await this._deleteIndexedDBGlobal();
+            results.push('IndexedDB data cleared.');
+        } catch (e) {
+            results.push(`IndexedDB delete failed: ${e.message}`);
         }
+
+        // 2. File System API cleanup (only if we have a live file handle)
+        try {
+            await this._deleteFileSystemData();
+            results.push('File System data removed.');
+        } catch (e) {
+            // Not having a file handle is expected after a page reload
+            if (e.message !== 'No file handle available.') {
+                results.push(`File System delete failed: ${e.message}`);
+            }
+        }
+
         this.totalBytesWritten = 0;
+        // Optional: return the results array for the UI to display
+        return results;
+    }
+
+    /**
+     * Clear IndexedDB without needing an open this.db connection.
+     */
+    async _deleteIndexedDBGlobal() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.deleteDatabase('StorageBenchmark');
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+            request.onblocked = () => reject(new Error('Database blocked.'));
+        });
     }
 
     // ========================================================================

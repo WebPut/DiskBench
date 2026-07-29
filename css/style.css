@@ -1,0 +1,316 @@
+/* ============================================================
+   GRUVBOX DARK THEME — CSS Custom Properties
+   ============================================================ */
+:root {
+    /* Background tones */
+    --bg0:        #1d2021;   /* darkest bg (body) */
+    --bg1:        #282828;   /* main container bg */
+    --bg2:        #3c3836;   /* input fields, cards */
+    --bg3:        #504945;   /* borders, subtle highlights */
+
+    /* Foreground / text */
+    --fg0:        #fbf1c7;   /* primary text */
+    --fg1:        #ebdbb2;   /* secondary text */
+    --fg2:        #d5c4a1;   /* muted text */
+    --fg3:        #bdae93;   /* even more muted */
+
+    /* Accent colors (gruvbox palette) */
+    --red:        #cc241d;
+    --orange:     #d65d0e;
+    --yellow:     #d79921;
+    --green:      #98971a;
+    --blue:       #458588;
+    --purple:     #b16286;
+    --aqua:       #689d6a;
+
+    /* Functional assignments */
+    --primary:       var(--aqua);
+    --primary-hover: #7caf7e;
+    --danger:        var(--red);
+    --danger-hover:  #e04b3e;
+    --border-color:  var(--bg3);
+    --shadow:        0 2px 8px rgba(0, 0, 0, 0.4);
+
+    /* Spacing & sizing */
+    --radius: 6px;
+    --gap: 1.5rem;
+    --max-width: 800px;
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg0);
+    color: var(--fg1);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+}
+
+/* ============================================================
+   MAIN LAYOUT
+   ============================================================ */
+main {
+    width: 100%;
+    max-width: var(--max-width);
+    background-color: var(--bg1);
+    border-radius: var(--radius);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+header {
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2rem;
+    color: var(--yellow);
+    margin-bottom: 0.5rem;
+}
+
+header p {
+    color: var(--fg2);
+    font-size: 0.95rem;
+}
+
+/* ============================================================
+   SECTION COMMONS
+   ============================================================ */
+section {
+    background-color: var(--bg2);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+section h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    color: var(--aqua);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ============================================================
+   FIELD GROUP (configuration)
+   ============================================================ */
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1.2rem;
+}
+
+.field-group:last-child {
+    margin-bottom: 0;
+}
+
+.field-group label {
+    font-weight: 500;
+    color: var(--fg1);
+}
+
+.field-group input,
+.field-group select {
+    background-color: var(--bg0);
+    color: var(--fg0);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.8rem;
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.field-group input:focus,
+.field-group select:focus {
+    border-color: var(--primary);
+}
+
+.field-group small {
+    color: var(--fg3);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* kbd style */
+kbd {
+    background-color: var(--bg3);
+    color: var(--fg1);
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-family: monospace;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    background-color: var(--primary);
+    color: var(--bg0);
+    font-family: inherit;
+}
+
+button:hover {
+    background-color: var(--primary-hover);
+}
+
+button:active {
+    transform: scale(0.97);
+}
+
+/* Danger button */
+#delete-btn {
+    background-color: var(--danger);
+    color: var(--fg0);
+}
+
+#delete-btn:hover {
+    background-color: var(--danger-hover);
+}
+
+/* ============================================================
+   STATS CARDS
+   ============================================================ */
+.stat-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stat-card:last-of-type {
+    border-bottom: none;
+}
+
+.stat-label {
+    font-weight: 500;
+    color: var(--fg2);
+}
+
+.stat-value {
+    font-weight: 700;
+    color: var(--fg0);
+    font-size: 1.1rem;
+    text-align: right;
+    word-break: break-word;
+}
+
+/* Special status coloring (overrides in JS can use classes) */
+#status-message {
+    color: var(--yellow);
+}
+
+/* ============================================================
+   DANGER ZONE
+   ============================================================ */
+#delete-status {
+    display: block;
+    margin-top: 0.8rem;
+    color: var(--fg3);
+    font-size: 0.9rem;
+}
+
+/* ============================================================
+   EVENT LOG
+   ============================================================ */
+#log-list {
+    list-style: none;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: var(--bg0);
+    border-radius: var(--radius);
+    padding: 0.8rem;
+    border: 1px solid var(--border-color);
+}
+
+#log-list li {
+    padding: 0.25rem 0;
+    color: var(--fg2);
+    font-family: monospace;
+    font-size: 0.85rem;
+    border-bottom: 1px dotted var(--bg3);
+}
+
+#log-list li:last-child {
+    border-bottom: none;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer {
+    text-align: center;
+    color: var(--fg3);
+    font-size: 0.85rem;
+    margin-top: 2rem;
+}
+
+footer a {
+    color: var(--aqua);
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+/*  RESPONSIVE TWEAKS */
+@media (max-width: 600px) {
+    body {
+        padding: 1rem 0.5rem;
+    }
+
+    main {
+        padding: 1.5rem;
+    }
+
+    .stat-card {
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .stat-value {
+        text-align: left;
+    }
+}

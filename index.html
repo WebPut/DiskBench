@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Benchmark</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ============================================================ -->
+    <!-- MAIN WRAPPER                                                -->
+    <!-- Everything lives inside here so we can center it later      -->
+    <!-- ============================================================ -->
+    <main>
+
+        <!-- ============================================================ -->
+        <!-- HEADER                                                       -->
+        <!-- ============================================================ -->
+        <header>
+            <h1>💾 Storage Benchmark</h1>
+            <p>
+                Fill your disk with cryptographically random data.<br>
+                Measure how fast your browser can write through IndexedDB or the File System API.
+            </p>
+        </header>
+
+        <!-- ============================================================ -->
+        <!-- CONFIGURATION SECTION                                        -->
+        <!-- All the knobs and dials the user can tweak                   -->
+        <!-- ============================================================ -->
+        <section aria-labelledby="config-heading">
+
+            <h2 id="config-heading">⚙️ Configuration</h2>
+
+            <!-- --- STORAGE TARGET --- -->
+            <div class="field-group">
+                <label for="storage-gb">
+                    <strong>Total storage to fill (GB):</strong>
+                </label>
+                <input
+                    type="number"
+                    id="storage-gb"
+                    name="storage-gb"
+                    min="0.1"
+                    step="0.1"
+                    value="1"
+                    placeholder="e.g. 5"
+                >
+                <small>How many gigabytes of random data you want to write.</small>
+            </div>
+
+            <!-- --- RAM BUFFER SIZE --- -->
+            <div class="field-group">
+                <label for="buffer-mb">
+                    <strong>RAM buffer size (MB):</strong>
+                </label>
+                <input
+                    type="number"
+                    id="buffer-mb"
+                    name="buffer-mb"
+                    min="1"
+                    step="1"
+                    value="64"
+                    placeholder="e.g. 64"
+                >
+                <small>
+                    Chunk size held in RAM before flushing to disk.<br>
+                    Larger = fewer writes but more memory pressure.
+                </small>
+            </div>
+
+            <!-- --- STORAGE BACKEND (we'll wire this up in JS later) --- -->
+            <div class="field-group">
+                <label for="backend-select">
+                    <strong>Storage backend:</strong>
+                </label>
+                <select id="backend-select" name="backend-select">
+                    <option value="indexeddb" selected>IndexedDB (works everywhere)</option>
+                    <option value="filesystem">File System API (Chromium-based browsers)</option>
+                </select>
+                <small>
+                    IndexedDB is widely supported. The File System API gives direct disk access but requires a compatible browser.
+                </small>
+            </div>
+
+            <!-- --- THE BIG BUTTON --- -->
+            <div class="field-group">
+                <button
+                    type="button"
+                    id="start-btn"
+                    aria-label="Start benchmark (or press Spacebar)"
+                >
+                    🚀 START BENCHMARK
+                </button>
+                <small>
+                    <kbd>Space</kbd> key also triggers this button.
+                </small>
+            </div>
+
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- LIVE STATS SECTION                                           -->
+        <!-- Numbers update in real time while the benchmark runs         -->
+        <!-- ============================================================ -->
+        <section aria-labelledby="stats-heading">
+
+            <h2 id="stats-heading">📊 Live Stats</h2>
+
+            <!-- --- TOTAL STORAGE TAKEN --- -->
+            <div class="stat-card" id="stat-total">
+                <span class="stat-label">Total storage used:</span>
+                <span class="stat-value" id="total-stored-value">0.00 GB</span>
+            </div>
+
+            <!-- --- PROGRESS (optional, nice to have) --- -->
+            <div class="stat-card" id="stat-progress">
+                <span class="stat-label">Progress:</span>
+                <span class="stat-value" id="progress-value">0%</span>
+            </div>
+
+            <!-- --- WRITE SPEED (optional, nice to have) --- -->
+            <div class="stat-card" id="stat-speed">
+                <span class="stat-label">Current write speed:</span>
+                <span class="stat-value" id="speed-value">— MB/s</span>
+            </div>
+
+            <!-- --- STATUS MESSAGE --- -->
+            <div class="stat-card" id="stat-status">
+                <span class="stat-label">Status:</span>
+                <span class="stat-value" id="status-message">Idle — waiting for you to press start.</span>
+            </div>
+
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- DANGER ZONE                                                  -->
+        <!-- Delete everything that was written to disk                   -->
+        <!-- ============================================================ -->
+        <section aria-labelledby="danger-heading">
+
+            <h2 id="danger-heading">⚠️ Danger Zone</h2>
+
+            <p>
+                This will <strong>permanently delete</strong> all benchmark data
+                stored on your device by this website.
+            </p>
+
+            <button
+                type="button"
+                id="delete-btn"
+                aria-label="Delete all stored benchmark data"
+            >
+                🗑️ DELETE ALL STORED DATA
+            </button>
+
+            <small id="delete-status">
+                No data has been deleted yet.
+            </small>
+
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- LOG / EVENT FEED (useful for debugging)                      -->
+        <!-- ============================================================ -->
+        <section aria-labelledby="log-heading">
+
+            <h2 id="log-heading">📋 Event Log</h2>
+
+            <!-- 
+                The log will be populated by JS.
+                Each <li> will be one event: "Buffer filled", "Flushed to disk", etc.
+            -->
+            <ul id="log-list" aria-live="polite">
+                <li>🟢 Page loaded. Ready for benchmarking.</li>
+            </ul>
+
+        </section>
+
+    </main>
+
+    <!-- ============================================================ -->
+    <!-- FOOTER                                                       -->
+    <!-- ============================================================ -->
+    <footer>
+        <p>
+            All random data is generated using the
+            <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API" target="_blank" rel="noopener noreferrer">
+                Web Crypto API
+            </a>
+            (<code>crypto.getRandomValues</code>).
+            No data ever leaves your machine.
+        </p>
+    </footer>
+
+    <script type="module" src="js/main.js"></script>
+
+</body>
+</html>

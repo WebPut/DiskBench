@@ -114,25 +114,21 @@ jobs:
       # -------------------------------------------------------------
 # STEP A: LINT EVERYTHING
 # -------------------------------------------------------------
-- name: Run HTML Linter
-  run: |
-    find . -name "*.html" \
-      -not -path "./node_modules/*" \
-      -not -path "./dist/*" \
-      -print0 | xargs -0 npx html-validate
 
-- name: Run Stylelint (CSS)
-  run: |
-    if [ -d css ]; then
-      npx stylelint "css/**/*.css"
-    fi
+        - {
+    "name": "Run HTML Linter",
+    "run": "find . -name '*.html' -not -path './node_modules/*' -not -path './dist/*' -print0 | xargs -0 npx html-validate"
+  }
 
-- name: Run ESLint (JS)
-  run: |
-    if [ -d js ]; then
-      npx eslint "js/**/*.js"
-    fi
+- {
+    "name": "Run Stylelint (CSS)",
+    "run": "if [ -d css ]; then npx stylelint 'css/**/*.css'; fi"
+  }
 
+- {
+    "name": "Run ESLint (JS)",
+    "run": "if [ -d js ]; then npx eslint 'js/**/*.js'; fi"
+  }
       # -------------------------------------------------------------
       # STEP B: PLAYWRIGHT TESTS (RAW SOURCE)
       # -------------------------------------------------------------

@@ -68,24 +68,23 @@ export class UIController {
         }
     }
 
-    async deleteAllData() {
-        const confirmed = confirm(
-            'Are you sure you want to permanently delete ALL benchmark data stored on this device?'
-        );
-        if (!confirmed) return;
+   async deleteAllData() {
+    const confirmed = confirm('Delete ALL benchmark data?');
+    if (!confirmed) return;
 
-        this.elements.deleteStatus.textContent = 'Deleting...';
-        try {
-            await this.storageManager.deleteAll();
-            this.elements.deleteStatus.textContent = 'All data has been deleted.';
-            this.refreshTotalStored();
-            this.elements.progressValue.textContent = '0%';
-            this.elements.speedValue.textContent = '— MB/s';
-            this.elements.statusMessage.textContent = 'Idle — all data cleared.';
-        } catch (err) {
-            this.elements.deleteStatus.textContent = `Delete failed: ${err.message}`;
-        }
+    this.elements.deleteStatus.textContent = 'Deleting...';
+    try {
+        await this.storageManager.deleteAll();
+        this.elements.deleteStatus.textContent = 'All data deleted.';
+        this.elements.totalStoredValue.textContent = '0.00 GB';
+        this.elements.progressValue.textContent = '0%';
+        this.elements.speedValue.textContent = '— MB/s';
+        this.elements.statusMessage.textContent = 'Idle — all data cleared.';
+    } catch (err) {
+        this.elements.deleteStatus.textContent = `Delete failed: ${err.message}`;
     }
+}
+
 
     onKeyDown(event) {
         if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') return;

@@ -1,23 +1,19 @@
 /**
  * StorageManager
- 
  * Unified interface for writing random data chunks to disk via IndexedDB or the
- * File System Access API. The rest of the app doesn't need to know which backend
- * is in use—it just calls write(), getTotalStored(), and deleteAll().
+ * File System Access API.
  */
 export class StorageManager {
     constructor() {
-        this.backend = null;          // 'indexeddb' or 'filesystem'
-        this.db = null;               // IndexedDB database instance
-        this.fileHandle = null;       // FileSystemFileHandle (for FS API)
-        this.writableStream = null;   // FileSystemWritableFileStream
-        this.totalBytesWritten = 0;   // running total, updated after each successful write
+        this.backend = null;
+        this.db = null;
+        this.fileHandle = null;
+        this.writableStream = null;
+        this.totalBytesWritten = 0;
     }
 
-    /**
-     * Initialize the selected backend.
-     * @param {'indexeddb'|'filesystem'} backendType
-     */
+    // ========== PUBLIC API ==========
+
     async init(backendType) {
         this.backend = backendType;
         if (backendType === 'indexeddb') {
@@ -25,14 +21,9 @@ export class StorageManager {
         } else if (backendType === 'filesystem') {
             await this._initFileSystem();
         }
-        // Recalculate total bytes already stored from previous sessions
         this.totalBytesWritten = await this.getTotalStored();
     }
 
-    /**
-     * Write a chunk of data (Uint8Array) to the active backend.
-     * @param {Uint8Array} data
-     */
     async write(data) {
         if (this.backend === 'indexeddb') {
             await this._writeToIndexedDB(data);
@@ -42,162 +33,129 @@ export class StorageManager {
         this.totalBytesWritten += data.byteLength;
     }
 
-    /**
-     * Get total bytes stored across all previous writes (even from past sessions).
-     * @returns {Promise<number>}
-     */
     async getTotalStored() {
-        if (this.backend === 'indexeddb') {
+        if (this.backend === 'indexeddb' && this.db) {
             return await this._getIndexedDBTotalSize();
-        } else if (this.backend === 'filesystem') {
+        } else if (this.backend === 'filesystem' && this.fileHandle) {
             return await this._getFileSystemTotalSize();
         }
         return 0;
     }
 
-       /**
-     * Delete all benchmark data from any possible backend.
-     * Works even if init() was never called.
-     */
     async deleteAll() {
-        const results = [];
-        // 1. IndexedDB cleanup (always possible)
+        // 1. Close everything and delete IndexedDB
         try {
-            await this._deleteIndexedDBGlobal();
-            results.push('IndexedDB data cleared.');
-        } catch (e) {
-            results.push(`IndexedDB delete failed: ${e.message}`);
-        }
-
-        // 2. File System API cleanup (only if we have a live file handle)
-        try {
-            await this._deleteFileSystemData();
-            results.push('File System data removed.');
-        } catch (e) {
-            // Not having a file handle is expected after a page reload
-            if (e.message !== 'No file handle available.') {
-                results.push(`File System delete failed: ${e.message}`);
+            if (this.db) {
+                this.db.close();
+                this.db = null;
             }
+            await this._deleteIndexedDBGlobal();
+        } catch (e) {
+            console.warn('IndexedDB delete:', e.message);
         }
 
+        // 2. Close stream and delete file system file
+        try {
+            await this._closeFileSystemStream();
+            if (this.fileHandle) {
+                await this.fileHandle.remove();
+                this.fileHandle = null;
+            }
+        } catch (e) {
+            console.warn('FileSystem delete:', e.message);
+        }
+
+        // 3. Reset everything
         this.totalBytesWritten = 0;
-        // Optional: return the results array for the UI to display
-        return results;
+        this.backend = null;
     }
 
-    /**
-     * Clear IndexedDB without needing an open this.db connection.
-     */
-    async _deleteIndexedDBGlobal() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.deleteDatabase('StorageBenchmark');
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-            request.onblocked = () => reject(new Error('Database blocked.'));
-        });
-    }
+    // ========== PRIVATE: IndexedDB ==========
 
-    // ========================================================================
-    // PRIVATE: IndexedDB implementation
-    // ========================================================================
-    async _initIndexedDB() {
+    _initIndexedDB() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open('StorageBenchmark', 1);
-
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
                 if (!db.objectStoreNames.contains('chunks')) {
-                    // Each chunk stored as { id: autoIncrement, data: Blob }
                     db.createObjectStore('chunks', { keyPath: 'id', autoIncrement: true });
                 }
             };
-
-            request.onsuccess = (event) => {
-                this.db = event.target.result;
+            request.onsuccess = (e) => {
+                this.db = e.target.result;
                 resolve();
             };
-
-            request.onerror = (event) => {
-                reject(new Error(`IndexedDB open failed: ${event.target.error}`));
-            };
+            request.onerror = () => reject(new Error('IDB open failed'));
         });
     }
 
-    async _writeToIndexedDB(data) {
-        if (!this.db) throw new Error('IndexedDB not initialized');
-        const transaction = this.db.transaction('chunks', 'readwrite');
-        const store = transaction.objectStore('chunks');
-        const blob = new Blob([data], { type: 'application/octet-stream' });
-        await new Promise((resolve, reject) => {
-            const request = store.add({ data: blob });
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
-    }
-
-    async _getIndexedDBTotalSize() {
-        if (!this.db) return 0;
-        const transaction = this.db.transaction('chunks', 'readonly');
-        const store = transaction.objectStore('chunks');
-        const request = store.getAll();
+    _writeToIndexedDB(data) {
+        if (!this.db) throw new Error('IDB not init');
         return new Promise((resolve, reject) => {
-            request.onsuccess = () => {
-                const chunks = request.result;
-                const total = chunks.reduce((sum, chunk) => sum + (chunk.data?.size || 0), 0);
-                resolve(total);
+            const tx = this.db.transaction('chunks', 'readwrite');
+            const store = tx.objectStore('chunks');
+            const blob = new Blob([data], { type: 'application/octet-stream' });
+            const req = store.add({ data: blob });
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    _getIndexedDBTotalSize() {
+        return new Promise((resolve, reject) => {
+            if (!this.db) return resolve(0);
+            const tx = this.db.transaction('chunks', 'readonly');
+            const store = tx.objectStore('chunks');
+            let total = 0;
+            const req = store.openCursor();
+            req.onsuccess = (e) => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    // Only read the 'size' property, NOT the blob data
+                    total += cursor.value.data.size || 0;
+                    cursor.continue();
+                } else {
+                    resolve(total);
+                }
             };
-            request.onerror = () => reject(request.error);
+            req.onerror = () => reject(req.error);
         });
     }
 
-    async _deleteIndexedDBData() {
-        if (!this.db) return;
-        const transaction = this.db.transaction('chunks', 'readwrite');
-        const store = transaction.objectStore('chunks');
-        await new Promise((resolve, reject) => {
-            const request = store.clear();
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
+    _deleteIndexedDBGlobal() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.deleteDatabase('StorageBenchmark');
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
         });
     }
 
-    // ========================================================================
-    // PRIVATE: File System Access API implementation
-    // ========================================================================
+    // ========== PRIVATE: File System ==========
+
     async _initFileSystem() {
-        // Check for support
         if (!('showSaveFilePicker' in window)) {
-            throw new Error('File System Access API not supported in this browser.');
-        }
-        // Ask user where to save the benchmark data file
-        try {
-            this.fileHandle = await window.showSaveFilePicker({
-                suggestedName: 'benchmark-data.bin',
-                types: [
-                    {
-                        description: 'Binary data',
-                        accept: { 'application/octet-stream': ['.bin'] },
-                    },
-                ],
-            });
-        } catch (err) {
-            // User cancelled the picker
-            if (err.name === 'AbortError') {
-                throw new Error('File selection cancelled.');
-            }
-            throw err;
+            throw new Error('File System API not supported');
         }
 
-        // Create a writable stream that we'll keep open for appending
+        // Close any previous stream/handle before opening a new one
+        await this._closeFileSystemStream();
+        if (this.fileHandle) {
+            try { await this.fileHandle.remove(); } catch(e) {}
+            this.fileHandle = null;
+        }
+
+        this.fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'benchmark-data.bin',
+            types: [{ description: 'Binary', accept: { 'application/octet-stream': ['.bin'] } }]
+        });
+
         this.writableStream = await this.fileHandle.createWritable({ keepExistingData: true });
     }
 
     async _writeToFileSystem(data) {
-        if (!this.writableStream) throw new Error('File system stream not open.');
-        // seek to end to append
-        const file = await this.fileHandle.getFile();
-        const currentSize = file.size;
-        await this.writableStream.write({ type: 'write', position: currentSize, data });
+        if (!this.writableStream) throw new Error('Stream not open');
+        // FIX: Write WITHOUT 'position' – it appends automatically
+        await this.writableStream.write(data);
     }
 
     async _getFileSystemTotalSize() {
@@ -206,14 +164,17 @@ export class StorageManager {
         return file.size;
     }
 
-    async _deleteFileSystemData() {
-        // Close stream first
+    async _closeFileSystemStream() {
         if (this.writableStream) {
-            await this.writableStream.close();
+            try { await this.writableStream.close(); } catch(e) {}
             this.writableStream = null;
         }
+    }
+
+    // This is called internally by deleteAll()
+    async _deleteFileSystemData() {
+        await this._closeFileSystemStream();
         if (this.fileHandle) {
-            // Remove the file (this will delete it from disk)
             await this.fileHandle.remove();
             this.fileHandle = null;
         }

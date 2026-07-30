@@ -1,41 +1,25 @@
 name: Test, Minify, and Deploy
-
-on:
+'on':
   push:
     branches:
       - dev
-
 permissions:
   contents: write
   pages: write
   id-token: write
-
 concurrency:
   group: github-pages-deploy
   cancel-in-progress: true
-
 jobs:
   pipeline:
     runs-on: ubuntu-latest
-
     steps:
-      # -------------------------------------------------------------
-      # 1. CHECKOUT
-      # -------------------------------------------------------------
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      # -------------------------------------------------------------
-      # 2. SETUP NODE
-      # -------------------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      # -------------------------------------------------------------
-      # 3. AUTO-CREATE package.json IF MISSING
-      # -------------------------------------------------------------
       - name: Create package.json if missing
         run: |
           if [ ! -f package.json ]; then
@@ -58,10 +42,6 @@ jobs:
           }
           EOF
           fi
-
-      # -------------------------------------------------------------
-      # 4. INSTALL DEPENDENCIES
-      # -------------------------------------------------------------
       - name: Install Dependencies
         run: |
           if [ -f package-lock.json ]; then
@@ -69,10 +49,6 @@ jobs:
           else
             npm install
           fi
-
-      # -------------------------------------------------------------
-      # 5. CREATE MINIMAL CONFIGS IF MISSING
-      # -------------------------------------------------------------
       - name: Create default linter configs if missing
         run: |
           if [ ! -f .htmlvalidate.json ]; then
@@ -101,42 +77,28 @@ jobs:
           ];
           EOF
           fi
-
-      # -------------------------------------------------------------
-      # 6. INSTALL PLAYWRIGHT BROWSERS
-      # -------------------------------------------------------------
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
-
-      # -------------------------------------------------------------
-      # STEP A: LINT EVERYTHING
-      # -------------------------------------------------------------
-
       - name: Run HTML Linter
         run: |
           find . -name "*.html" \
           -not -path "./node_modules/*" \
           -not -path "./dist/*" \
           -print0 | xargs -0 npx html-validate
-     - name: Run Stylelint (CSS)
-       run: |
-        if [ -d css ]; then
-        npx stylelint "css/**/*.css"
-        fi
-     - name: Run ESLint (JS)
+      - name: Run Stylelint (CSS)
+        run: |
+          if [ -d css ]; then
+          npx stylelint "css/**/*.css"
+          fi
+      - name: Run ESLint (JS)
         run: |
           if [ -d js ]; then
           npx eslint "js/**/*.js"
           fi
-
-      # -------------------------------------------------------------
-      # STEP B: PLAYWRIGHT TESTS (RAW SOURCE)
-      # -------------------------------------------------------------
       - name: Start Local Server (Source)
         run: |
           npx http-server . -p 4172 &
           sleep 5
-
       - name: Run Playwright Tests (Raw Source Code)
         env:
           PLAYWRIGHT_TEST_BASE_URL: http://127.0.0.1:4172
@@ -146,10 +108,6 @@ jobs:
           else
             echo "No tests directory found - skipping raw Playwright tests."
           fi
-
-      # -------------------------------------------------------------
-      # STEP C: BUILD & MINIFY
-      # -------------------------------------------------------------
       - name: Build & Minify Files
         run: |
           rm -rf dist
@@ -204,15 +162,10 @@ jobs:
               cp -R "$dir/"* "dist/$dir/" 2>/dev/null || true
             fi
           done
-
-      # -------------------------------------------------------------
-      # STEP D: TEST MINIFIED BUILD
-      # -------------------------------------------------------------
       - name: Start Local Server (Dist)
         run: |
           npx http-server dist -p 4173 &
           sleep 5
-
       - name: Run Playwright Tests Against Minified Code
         env:
           PLAYWRIGHT_TEST_BASE_URL: http://127.0.0.1:4173
@@ -222,10 +175,6 @@ jobs:
           else
             echo "No tests directory found - skipping minified Playwright tests."
           fi
-
-      # -------------------------------------------------------------
-      # STEP E: DEPLOY TO MAIN (GITHUB PAGES)
-      # -------------------------------------------------------------
       - name: Deploy Minified Build to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -233,3 +182,4 @@ jobs:
           publish_dir: ./dist
           publish_branch: main
           force_orphan: true
+

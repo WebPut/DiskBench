@@ -1,1 +1,1 @@
-https://webput.github.com/DiskBench
+https://webput.github.io/DiskBench
